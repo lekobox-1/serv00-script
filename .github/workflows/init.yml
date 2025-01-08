@@ -1,0 +1,53 @@
+name: Run Init
+
+on:
+  workflow_dispatch:
+
+jobs:
+  init:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Install ssh-copy-id
+        run: |
+          sudo apt-get install -y openssh-client
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Run
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PUSH_PLUS_TOKEN: ${{ secrets.PUSH_PLUS_TOKEN }}
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          LOG_LEVEL: ${{ secrets.Log_level }}
+          ACCOUNTS_JSON: ${{ secrets.ACCOUNTS_JSON }}
+        run: go run main.go init
+
+      - name: Append Success Log #追加成功日志
+        run: |
+          echo "$(date +'%F %T') - init任务执行成功" >> log/init.log
+      - name: Upload log #上传日志
+        uses: actions/upload-artifact@v4
+        with:
+          name: init-log
+          path: log/init.log
+      - name: Pull remote changes
+        run: git pull
+      - name: Push log #更新日志
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "init log"
+          branch: main
